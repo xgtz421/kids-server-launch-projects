@@ -1,89 +1,103 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+// eslint-disable-next-line @typescript-eslint/naming-convention
+import * as child_process from 'child_process';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+    console.log('Congratulations, your extension "kids-server-launch-projects" is now active!');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "kids-server-launch-projects" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('kids-server-dotnet-launcher.launchProjects', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from kids-server-launch-projects!');
-
-		const workspaceFolders = vscode.workspace.workspaceFolders;
-		if (!workspaceFolders) {
-			vscode.window.showErrorMessage('No workspace folder is open.');
-			return;
+	const findProcess = async (port: number) => {
+		try {
+			const result = await new Promise<string>((resolve, reject) => {
+				const process = child_process.exec(`netstat -ano | findstr ":${port}"`, (error, stdout) => {
+					if (error) {
+						reject(error);
+					} else {
+						resolve(stdout);
+					}
+				});
+			});
+			return result;
+		} catch (error) {
+			console.error(`Error checking service: ${error}`);
+			return "";
 		}
+	};
 
-		const rootPath = workspaceFolders[0].uri.fsPath;
+	const kidProcess = async (stdout: string) => {
+		try {
+			const pid = Number(stdout.split(" ").pop());
+			if (pid) {
+				child_process.exec(`taskkill /F /PID ${pid}`);
+			}
+		} catch{}
+	};
+	
 
-		// Terminal for Leyser.Kids.Account
-		const terminalAccount = vscode.window.createTerminal("Account");
-		terminalAccount.show();
-		terminalAccount.sendText(`cd "${rootPath}/Leyser.Kids.Account" && dotnet run`);
+    const disposable = vscode.commands.registerCommand('kids-server-dotnet-launcher.launchProjects', async () => {
+        vscode.window.showInformationMessage('正在按顺序启动服务...');
 
-		// Terminal for Leyser.Kids.Communication
-		const terminalCommunication = vscode.window.createTerminal("Communication");
-		terminalCommunication.show();
-		terminalCommunication.sendText(`cd "${rootPath}/Leyser.Kids.Communication" && dotnet run`);
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder is open.');
+            return;
+        }
 
-		// Terminal for Leyser.Kids.Gateway
-		const terminalGateway = vscode.window.createTerminal("Gateway");
-		terminalGateway.show();
-		terminalGateway.sendText(`cd "${rootPath}/Leyser.Kids.Gateway" && dotnet run`);
+        const rootPath = workspaceFolders[0].uri.fsPath;
 
-		// Terminal for Leyser.Kids.Intelligence
-		const terminalIntelligence = vscode.window.createTerminal("Intelligence");
-		terminalIntelligence.show();
-		terminalIntelligence.sendText(`cd "${rootPath}/Leyser.Kids.Intelligence" && dotnet run`);
+        const executeDotnetRun = async (terminalName: string, port: number) => {
+            const path = `${rootPath}/Leyser.Kids.${terminalName}`;
+            const terminal = vscode.window.createTerminal(terminalName);
+            terminal.show();
 
-		// Terminal for Leyser.Kids.Kms
-		const terminalKms = vscode.window.createTerminal("Kms");
-		terminalKms.show();
-		terminalKms.sendText(`cd "${rootPath}/Leyser.Kids.Kms" && dotnet run`);
+			try {
+				const result = await findProcess(port);
+				if (result) {
+					await kidProcess(result);
+				}
+			} catch{}
 
-		// Terminal for Leyser.Kids.Levy
-		const terminalLevy = vscode.window.createTerminal("Levy");
-		terminalLevy.show();
-		terminalLevy.sendText(`cd "${rootPath}/Leyser.Kids.Levy" && dotnet run`);
+            // Start the service
+            terminal.sendText(`cd "${path}" && dotnet run`);
 
-		// Terminal for Leyser.Kids.Sns
-		const terminalSns = vscode.window.createTerminal("Sns");
-		terminalSns.show();
-		terminalSns.sendText(`cd "${rootPath}/Leyser.Kids.Sns" && dotnet run`);
+            // Wait for the service to start
+            let isReady = false;
 
-		// Terminal for Leyser.Kids.Teacher
-		const terminalTeacher = vscode.window.createTerminal("Teacher");
-		terminalTeacher.show();
-		terminalTeacher.sendText(`cd "${rootPath}/Leyser.Kids.Teacher" && dotnet run`);
+            const checkService = async () => {
+                try {
+					const result = await findProcess(port);
+					if (result && result.includes("LISTENING")) {
+						isReady = true;
+					}
+                } catch (error) {
+                    console.error(`Error checking service: ${error}`);
+                }
+            };
 
-		// Terminal for Leyser.Kids.Teaching
-		const terminalTeaching = vscode.window.createTerminal("Teaching");
-		terminalTeaching.show();
-		terminalTeaching.sendText(`cd "${rootPath}/Leyser.Kids.Teaching" && dotnet run`);
+            // Check every second until service is ready
+            while (!isReady) {
+                await checkService();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        };
 
-		// Terminal for Leyser.Kids.Worker
-		const terminalWorker= vscode.window.createTerminal("Worker");
-		terminalWorker.show();
-		terminalWorker.sendText(`cd "${rootPath}/Leyser.Kids.Worker" && dotnet run`);
+        try {
+            // Start services in sequence
+            await executeDotnetRun("Account", 30000);
+            await executeDotnetRun("Communication", 62000);
+            await executeDotnetRun("Gateway", 4000);
+            await executeDotnetRun("Intelligence", 58070);
+            await executeDotnetRun("Kms", 58050);
+            await executeDotnetRun("Levy", 58040);
+            await executeDotnetRun("Sns", 58120);
+            await executeDotnetRun("Teacher", 60001);
+            await executeDotnetRun("Teaching", 60000);
+            await executeDotnetRun("Worker", 58030);
+            await executeDotnetRun("BusinessLog", 61000);
+            vscode.window.showInformationMessage('所有服务已按顺序启动完成！');
+        } catch (error) {
+            vscode.window.showErrorMessage(`启动过程中发生错误: ${error}`);
+        }
+    });
 
-		// Terminal for Leyser.Kids.Worker
-		const terminalBusinessLog= vscode.window.createTerminal("BusinessLog");
-		terminalBusinessLog.show();
-		terminalBusinessLog.sendText(`cd "${rootPath}/Leyser.Kids.BusinessLog" && dotnet run`);
-	});
-
-	context.subscriptions.push(disposable);
+    context.subscriptions.push(disposable);
 }
-
-// This method is called when your extension is deactivated
-export function deactivate() {}

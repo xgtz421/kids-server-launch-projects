@@ -1,6 +1,6 @@
 # kids-server-launch-projects
 
-一个用于在 VS Code 中快速启动多个 dotnet 服务（如 Leyser.Kids.Kms 和 Leyser.Kids.Sns）的插件。
+一个用于在 VS Code 中快速启动多个 Leyser.Kids.dotnet 服务（如 Leyser.Kids.Kms 和 Leyser.Kids.Sns）的插件。
 
 ## Features
 

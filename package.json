@@ -1,10 +1,12 @@
 {
   "name": "kids-server-launch-projects",
+  "publisher": "布鲁斯-皮", 
   "displayName": "kids-server-launch-projects",
   "description": "auto launch kids .net projects in vscode",
-  "version": "0.0.1",
+  "icon": "images/icon.png",
+  "version": "0.0.6",
   "engines": {
-    "vscode": "^1.102.0"
+    "vscode": "^1.75.0"
   },
   "categories": [
     "Other"
@@ -20,8 +22,13 @@
       }
     ]
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xgtz421/kids-server-launch-projects.git"
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "package": "vsce package",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
@@ -29,7 +36,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.102.0",
+    "@types/vscode": "^1.75.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
