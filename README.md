@@ -15,7 +15,7 @@
 
 ## Usage
 
-按 `Ctrl+Shift+P` 输入 `Launch Dotnet Projects in Terminals` 即可
+按 `Ctrl+Shift+P` 输入 `Kids Dotnet Projects Server Launch in Terminals` 即可
 
 ## Release Notes
 

@@ -15,7 +15,7 @@
     "commands": [
       {
         "command": "kids-server-dotnet-launcher.launchProjects",
-        "title": "Launch Kids Dotnet Projects in Terminals",
+        "title": "Kids Dotnet Projects Server Launch in Terminals",
         "key": "ctrl+f10"
       }
     ]
