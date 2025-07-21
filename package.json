@@ -1,6 +1,6 @@
 {
   "name": "kids-server-launch-projects",
-  "publisher": "布鲁斯-皮", 
+  "publisher": "BrucePi", 
   "displayName": "kids-server-launch-projects",
   "description": "auto launch kids .net projects in vscode",
   "icon": "images/icon.png",
@@ -29,6 +29,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "package": "vsce package",
+    "publish": "vsce publish",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
