@@ -8,7 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const findProcess = async (port: number) => {
 		try {
 			const result = await new Promise<string>((resolve, reject) => {
-				const process = child_process.exec(`netstat -ano | findstr ":${port}"`, (error, stdout) => {
+				child_process.exec(`netstat -ano | findstr ":${port}"`, (error, stdout) => {
 					if (error) {
 						reject(error);
 					} else {
@@ -46,7 +46,16 @@ export function activate(context: vscode.ExtensionContext) {
 
         const executeDotnetRun = async (terminalName: string, port: number) => {
             const path = `${rootPath}/Leyser.Kids.${terminalName}`;
-            const terminal = vscode.window.createTerminal(terminalName);
+            
+            // 检查是否已存在同名的终端
+            let terminal = vscode.window.terminals.find(t => t.name === terminalName);
+            
+            // 如果不存在则创建新终端
+            if (!terminal) {
+                terminal = vscode.window.createTerminal(terminalName);
+            }
+            
+            // 显示终端
             terminal.show();
 
 			try {
