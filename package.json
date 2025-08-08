@@ -4,7 +4,7 @@
   "displayName": "kids-server-launch-projects",
   "description": "auto launch kids .net projects in vscode",
   "icon": "images/icon.png",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -17,8 +17,13 @@
     "commands": [
       {
         "command": "kids-server-dotnet-launcher.launchProjects",
-        "title": "Kids Dotnet Projects Server Launch in Terminals",
+        "title": "Kids Launch .NET Services",
         "key": "ctrl+f10"
+      },
+      {
+        "command": "kids-server-node-launcher.launchProjects",
+        "title": "Kids Launch Node Services",
+        "key": "ctrl+f11"
       }
     ]
   },
