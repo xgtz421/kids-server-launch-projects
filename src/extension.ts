@@ -66,7 +66,9 @@ export function activate(context: vscode.ExtensionContext) {
 			} catch{}
 
             // Start the service
-            terminal.sendText(`cd "${path}" && dotnet run`);
+            // 使用 JSON.stringify 来正确转义路径中的反斜杠
+            const command = `cd ${JSON.stringify(path)} && dotnet run`;
+            terminal.sendText(command);
 
             // Wait for the service to start
             let isReady = false;
