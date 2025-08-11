@@ -1,17 +1,20 @@
 # kids-server-launch-projects
 
-一个用于在 VS Code 中快速启动多个 Leyser.Kids.dotnet 服务（如 Leyser.Kids.Kms 和 Leyser.Kids.Sns）的插件。
+一个用于在 VS Code 中快速启动多个 Leyser.Kids.dotnet 服务和前端Node服务的插件。
 
 ## Features
 
-- 一键启动多个项目
-- 每个服务使用独立终端面板执行 dotnet run
+- 一键直接从vscode中启动多个项目
+- 每个服务使用独立终端面板执行 dotnet run或gulp
+- terminal面板的名称为服务名称
+- 在启动.Net时，会自动检查端口占用并终止占用端口的进程
+- 服务会依次启动，避免因为多个进程使用共同的dll而导致占用冲突
 - 无需手动操作终端或点击文件夹
 
 ## Requirements
-
-- 安装 .NET SDK
 - 使用 VS Code 工作区打开包含两个项目的根目录
+- 如果要运行.Net，请确保已安装 .NET SDK
+- 如果要运行Node，请确保已安装 Node.js
 
 ## Usage
 
@@ -20,7 +23,7 @@
 
 ## Configuration
 
-在 `.vscode/kids-launch.json` 中添加以下配置来设置各个服务的启动参数：
+在 `.vscode/kids-launch.json` 中添加以下配置来设置各个服务的启动参数(这个配置文件是可选的，如果不存在，会使用默认配置)：
 
 ```json
 {
@@ -42,6 +45,14 @@
   },
   "node": {
     "command": "gulp",
+    "env": {
+      "HOST": "localhost",
+      "APIURLS_ACCOUNT_URL": "http://${HOST:-localhost}:3000",
+      "APIURLS_GATEWAY_URL": "http://${HOST:-localhost}:4000",
+      "APIURLS_KTS_URL": "http://${HOST:-localhost}:5000",
+      "APIURLS_KPS_URL": "http://${HOST:-localhost}:6001",
+      "APIURLS_KMS_URL": "http://${HOST:-localhost}:7000"
+    },
     "services": [
       { "name": "cloud", "port": 5000, "path": "develop/server/sites/cloud/" },
       { "name": "account", "port": 3000, "path": "develop/server/sites/account/" },
@@ -63,3 +74,8 @@
 
 - 添加node和.net服务启动支持
 - 支持自定义配置可启动的服务
+
+### 0.1.2
+
+- 修复环境变量设置问题
+- 添加默认的配置

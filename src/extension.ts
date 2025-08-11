@@ -5,12 +5,43 @@ import * as path from 'path';
 
 interface ServiceConfig {
     command: string;
+    env?: Record<string, string>;
     services: Array<{
         name: string;
         port: number;
         path: string;
     }>;
 }
+
+// 默认配置
+const defaultConfig: Record<string, ServiceConfig> = {
+    dotnet: {
+        command: "dotnet run",
+        services: []
+    },
+    node: {
+        command: "gulp",
+        env: {
+            "HOST": "localhost",
+            "APIURLS_ACCOUNT_URL": "http://${HOST:-localhost}:3000",
+            "APIURLS_GATEWAY_URL": "http://${HOST:-localhost}:4000",
+            "APIURLS_KTS_URL": "http://${HOST:-localhost}:5000",
+            "APIURLS_KPS_URL": "http://${HOST:-localhost}:6001",
+            "APIURLS_KMS_URL": "http://${HOST:-localhost}:7000"
+        },
+        services: [
+            { "name": "cloud", "port": 5000, "path": "develop/server/sites/cloud/" },
+            { "name": "account", "port": 3000, "path": "develop/server/sites/account/" },
+            { "name": "manage", "port": 7000, "path": "develop/server/sites/manage/" },
+            { "name": "public", "port": 6001, "path": "develop/server/sites/public/" },
+            { "name": "teaching", "port": 58000, "path": "develop/server/services/teaching/" },
+            { "name": "communication", "port": 58010, "path": "develop/server/services/communication/" },
+            { "name": "levy", "port": 9003, "path": "develop/server/services/levy/" },
+            { "name": "sns", "port": 58020, "path": "develop/server/services/sns/" },
+            { "name": "worker", "port": 59200, "path": "develop/server/services/worker/" }
+        ]
+    }
+};
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Extension "kids-server-launch-projects" is now active!');
@@ -43,6 +74,8 @@ export function activate(context: vscode.ExtensionContext) {
         }
     };
 
+    
+
     const loadConfig = (serviceType: string): ServiceConfig => {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
@@ -50,18 +83,31 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         const configPath = path.join(workspaceFolders[0].uri.fsPath, '.vscode', 'kids-launch.json');
+        
+        // 如果配置文件不存在，返回默认配置
         if (!fs.existsSync(configPath)) {
-            throw new Error('Configuration file not found. Please create .vscode/kids-launch.json');
+            if (!defaultConfig[serviceType]) {
+                throw new Error(`Service type '${serviceType}' not found in default configuration.`);
+            }
+            return defaultConfig[serviceType];
         }
 
         try {
             const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
             if (!config[serviceType]) {
+                // 如果配置文件中没有找到对应的服务类型，尝试返回默认配置
+                if (defaultConfig[serviceType]) {
+                    return defaultConfig[serviceType];
+                }
                 throw new Error(`Service type '${serviceType}' not found in configuration.`);
             }
             return config[serviceType];
         } catch (error) {
-            throw new Error(`Failed to parse configuration: ${error}`);
+            console.error('Failed to load configuration, using default config:', error);
+            if (defaultConfig[serviceType]) {
+                return defaultConfig[serviceType];
+            }
+            throw new Error(`Failed to load configuration and no default config for '${serviceType}': ${error}`);
         }
     };
 
@@ -98,6 +144,13 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 } catch (error) {
                     console.error(`Error checking port ${service.port}:`, error);
+                }
+
+                // 设置环境变量
+                if (config.env) {
+                    for (const [key, value] of Object.entries(config.env)) {
+                        terminal.sendText(`set ${key}=${value}`);
+                    }
                 }
 
                 // 构建并执行命令
