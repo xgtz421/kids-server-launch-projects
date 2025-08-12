@@ -17,7 +17,19 @@ interface ServiceConfig {
 const defaultConfig: Record<string, ServiceConfig> = {
     dotnet: {
         command: "dotnet run",
-        services: []
+        services: [
+            { "name": "Account", "port": 30000, "path": "Leyser.Kids.Account" },
+            { "name": "Communication", "port": 62000, "path": "Leyser.Kids.Communication" },
+            { "name": "Gateway", "port": 4000, "path": "Leyser.Kids.Gateway" },
+            { "name": "Intelligence", "port": 58070, "path": "Leyser.Kids.Intelligence" },
+            { "name": "Kms", "port": 58050, "path": "Leyser.Kids.Kms" },
+            { "name": "Levy", "port": 58040, "path": "Leyser.Kids.Levy" },
+            { "name": "Sns", "port": 58120, "path": "Leyser.Kids.Sns" },
+            { "name": "Teacher", "port": 60001, "path": "Leyser.Kids.Teacher" },
+            { "name": "Teaching", "port": 60000, "path": "Leyser.Kids.Teaching" },
+            { "name": "Worker", "port": 58030, "path": "Leyser.Kids.Worker" },
+            { "name": "BusinessLog", "port": 61000, "path": "Leyser.Kids.BusinessLog" }
+        ]
     },
     node: {
         command: "gulp",
