@@ -168,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
                 }
 
                 // 构建并执行命令
-                const command = `cd "${servicePath.replace(/"/g, '\\"')}" && ${config.command}`;
+                const command = `cd ${JSON.stringify(servicePath)} && ${config.command}`;
                 terminal.sendText(command);
 
                 // 等待服务启动
