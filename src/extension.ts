@@ -148,6 +148,8 @@ export function activate(context: vscode.ExtensionContext) {
                 
                 terminal.show();
 
+                await new Promise((resolve) => setTimeout(resolve, 200));
+
                 // 检查并终止占用端口的进程
                 try {
                     const result = await findProcess(service.port);
@@ -166,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
                 }
 
                 // 构建并执行命令
-                const command = `cd ${JSON.stringify(servicePath)} && ${config.command}`;
+                const command = `cd "${servicePath.replace(/"/g, '\\"')}" && ${config.command}`;
                 terminal.sendText(command);
 
                 // 等待服务启动
