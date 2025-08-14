@@ -61,18 +61,24 @@ export function activate(context: vscode.ExtensionContext) {
     const findProcess = async (port: number): Promise<string> => {
         try {
             return await new Promise<string>((resolve, reject) => {
-                // 使用正则表达式确保精确匹配端口号
-                // 使用单词边界 \b 来确保端口号完全匹配
-                childProcess.exec(`netstat -ano | findstr ":${port}\\b"`, (error, stdout) => {
+                // 使用 netstat 获取所有连接，然后在 JavaScript 中精确匹配端口
+                childProcess.exec('netstat -ano', (error, stdout) => {
                     if (error) {
-                        // 如果没有找到进程，返回空字符串而不是reject
                         if (error.message.includes('returned non-zero exit status 1')) {
                             resolve('');
                         } else {
                             reject(error);
                         }
                     } else {
-                        resolve(stdout);
+                        // 按行分割结果
+                        const lines = stdout.split('\n');
+                        // 过滤出包含精确端口号的行
+                        const matchedLines = lines.filter(line => {
+                            // 匹配格式如 "TCP    0.0.0.0:3000          0.0.0.0:0" 或 "  TCP    0.0.0.0:3000          :::0"
+                            return line.match(new RegExp(`:${port}(\\s|$)`));
+                        });
+                        // 返回匹配的行，如果没有匹配则返回空字符串
+                        resolve(matchedLines.join('\n'));
                     }
                 });
             });
