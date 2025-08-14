@@ -4,7 +4,7 @@
   "displayName": "kids-server-launch-projects",
   "description": "auto launch kids .net projects in vscode",
   "icon": "images/icon.png",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "engines": {
     "vscode": "^1.75.0"
   },

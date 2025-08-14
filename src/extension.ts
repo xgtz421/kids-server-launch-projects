@@ -61,9 +61,16 @@ export function activate(context: vscode.ExtensionContext) {
     const findProcess = async (port: number): Promise<string> => {
         try {
             return await new Promise<string>((resolve, reject) => {
-                childProcess.exec(`netstat -ano | findstr ":${port}"`, (error, stdout) => {
+                // 使用正则表达式确保精确匹配端口号
+                // 使用单词边界 \b 来确保端口号完全匹配
+                childProcess.exec(`netstat -ano | findstr ":${port}\\b"`, (error, stdout) => {
                     if (error) {
-                        reject(error);
+                        // 如果没有找到进程，返回空字符串而不是reject
+                        if (error.message.includes('returned non-zero exit status 1')) {
+                            resolve('');
+                        } else {
+                            reject(error);
+                        }
                     } else {
                         resolve(stdout);
                     }
