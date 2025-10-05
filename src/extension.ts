@@ -155,9 +155,11 @@ export function activate(context: vscode.ExtensionContext) {
                 
                 // 检查是否已存在同名的终端
                 let terminal = vscode.window.terminals.find(t => t.name === terminalName);
-                if (!terminal) {
-                    terminal = vscode.window.createTerminal(terminalName);
+                if (terminal) {
+                    terminal.dispose();
                 }
+                // 总是创建新的终端
+                terminal = vscode.window.createTerminal(terminalName);
                 
                 terminal.show();
 
