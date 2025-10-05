@@ -136,6 +136,49 @@ export function activate(context: vscode.ExtensionContext) {
         }
     };
 
+    // 检测终端类型并构建相应的命令
+    const buildCommand = (servicePath: string, command: string, terminal: vscode.Terminal): string => {
+        // 检测终端类型
+        const terminalName = terminal.name.toLowerCase();
+        const isGitBash = terminalName.includes('bash') || terminalName.includes('git');
+        const isPowerShell = terminalName.includes('powershell') || terminalName.includes('pwsh');
+        const isCmd = terminalName.includes('cmd') || terminalName.includes('command');
+        
+        if (isGitBash) {
+            // Git Bash: 使用正斜杠和双引号
+            const escapedPath = servicePath.replace(/\\/g, '/').replace(/"/g, '\\"');
+            return `cd "${escapedPath}" && ${command}`;
+        } else if (isPowerShell) {
+            // PowerShell: 使用反斜杠和单引号
+            const escapedPath = servicePath.replace(/'/g, "''");
+            return `cd '${escapedPath}'; ${command}`;
+        } else if (isCmd) {
+            // CMD: 使用反斜杠和双引号
+            const escapedPath = servicePath.replace(/"/g, '\\"');
+            return `cd "${escapedPath}" && ${command}`;
+        } else {
+            // 默认情况：尝试通用格式
+            const escapedPath = servicePath.replace(/\\/g, '/').replace(/"/g, '\\"');
+            return `cd "${escapedPath}" && ${command}`;
+        }
+    };
+
+    // 构建备用命令（用于重试）
+    const buildFallbackCommand = (servicePath: string, command: string, terminal: vscode.Terminal): string => {
+        const terminalName = terminal.name.toLowerCase();
+        const isGitBash = terminalName.includes('bash') || terminalName.includes('git');
+        
+        if (isGitBash) {
+            // Git Bash 备用方案：使用不同的路径格式
+            const escapedPath = servicePath.replace(/\\/g, '/');
+            // 尝试不使用引号，或者使用单引号
+            return `cd ${escapedPath} && ${command}`;
+        } else {
+            // 其他终端使用原始命令
+            return buildCommand(servicePath, command, terminal);
+        }
+    };
+
     const launchServices = async (serviceType: string) => {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
@@ -177,35 +220,87 @@ export function activate(context: vscode.ExtensionContext) {
 
                 // 设置环境变量
                 if (config.env) {
+                    const terminalName = terminal.name.toLowerCase();
+                    const isGitBash = terminalName.includes('bash') || terminalName.includes('git');
+                    const isPowerShell = terminalName.includes('powershell') || terminalName.includes('pwsh');
+                    
                     for (const [key, value] of Object.entries(config.env)) {
-                        terminal.sendText(`set ${key}=${value}`);
+                        if (isGitBash) {
+                            // Git Bash: 使用 export 命令
+                            terminal.sendText(`export ${key}="${value}"`);
+                        } else if (isPowerShell) {
+                            // PowerShell: 使用 $env: 语法
+                            terminal.sendText(`$env:${key}="${value}"`);
+                        } else {
+                            // CMD: 使用 set 命令
+                            terminal.sendText(`set ${key}=${value}`);
+                        }
                     }
                 }
 
                 // 构建并执行命令
-                const command = `cd ${JSON.stringify(servicePath)} && ${config.command}`;
-                terminal.sendText(command);
-
-                // 等待服务启动
-                let isReady = false;
-                const checkService = async () => {
-                    try {
-                        const result = await findProcess(service.port);
-                        if (result && result.includes("LISTENING")) {
-                            isReady = true;
+                const command = buildCommand(servicePath, config.command, terminal);
+                
+                // 执行命令并添加重试机制
+                const executeCommandWithRetry = async () => {
+                    let retryCount = 0;
+                    const maxRetries = 2;
+                    
+                    const tryExecute = async () => {
+                        if (retryCount === 0) {
+                            // 第一次尝试：使用标准命令
+                            terminal.sendText(command);
+                        } else {
+                            // 重试：使用备用命令格式
+                            const fallbackCommand = buildFallbackCommand(servicePath, config.command, terminal);
+                            terminal.sendText(fallbackCommand);
                         }
-                    } catch (error) {
-                        console.error(`Error checking service: ${error}`);
+                        
+                        // 等待命令执行
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        
+                        // 检查服务是否成功启动
+                        try {
+                            const result = await findProcess(service.port);
+                            if (result && result.includes("LISTENING")) {
+                                return true; // 成功启动
+                            }
+                        } catch (error) {
+                            console.error(`Error checking service: ${error}`);
+                        }
+                        
+                        return false; // 未成功启动
+                    };
+                    
+                    // 尝试执行命令
+                    let success = await tryExecute();
+                    
+                    // 如果失败且还有重试次数，则重试
+                    while (!success && retryCount < maxRetries) {
+                        retryCount++;
+                        vscode.window.showWarningMessage(`服务 ${service.name} 启动可能失败，正在重试 (${retryCount}/${maxRetries})...`);
+                        
+                        // 等待一段时间后重试
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        success = await tryExecute();
+                    }
+                    
+                    if (!success) {
+                        vscode.window.showErrorMessage(`服务 ${service.name} 启动失败，请手动检查终端输出`);
                     }
                 };
+                
+                await executeCommandWithRetry();
 
-                // 每秒钟检查一次服务是否就绪
-                while (!isReady) {
-                    await checkService();
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                // 如果服务成功启动，显示成功消息
+                try {
+                    const result = await findProcess(service.port);
+                    if (result && result.includes("LISTENING")) {
+                        vscode.window.showInformationMessage(`${serviceType} 服务 ${service.name} 已启动 (端口: ${service.port})`);
+                    }
+                } catch (error) {
+                    console.error(`Error checking final service status: ${error}`);
                 }
-
-                vscode.window.showInformationMessage(`${serviceType} 服务 ${service.name} 已启动 (端口: ${service.port})`);
             }
 
             vscode.window.showInformationMessage(`${serviceType} 所有服务已启动完成！`);
